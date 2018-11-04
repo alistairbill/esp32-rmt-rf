@@ -164,22 +164,21 @@ static int parse_items(rmt_item32_t* item, int item_num, uint32_t* data)
  */
 static int build_items(rmt_item32_t* item, int item_num, uint32_t data)
 {
-    int i = 0, j = 0;
+    int i = 0;
     if(item_num < DATA_ITEM_NUM) {
         return -1;
     }
-    fill_item_header(item++);
-    i++;
-    for(j = 0; j < 24; j++) {
-        if(data & 0x1) {
+    for (int j = 23; j >= 0; j--) {
+        if(data & (1 << j)) {
             fill_item_bit_one(item);
         } else {
             fill_item_bit_zero(item);
         }
         item++;
         i++;
-        data >>= 1;
     }
+    fill_item_header(item++);
+    i++;
     return i;
 }
 
