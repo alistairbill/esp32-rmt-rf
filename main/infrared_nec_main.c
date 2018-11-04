@@ -38,7 +38,7 @@ static const char* RMT_TAG = "RMT";
 #define DATA_ITEM_NUM 25  // number of bits: header + 24bit data
 #define rmt_item32_tIMEOUT_US 15000 // RMT receiver timeout value (us)
 
-#define TX_REPEATS 1
+#define TX_REPEATS 10
 
 /*
  * @brief Build register value of waveform for one data bit
@@ -95,7 +95,8 @@ static bool header_if(rmt_item32_t* item)
 {
     if((item->level0 == 1 && item->level1 == 0)
         && check_in_range(item->duration0, HEADER_HIGH_US, BIT_MARGIN)
-        && check_in_range(item->duration1, HEADER_LOW_US, BIT_MARGIN)) {
+        && (check_in_range(item->duration1, HEADER_LOW_US, BIT_MARGIN)
+         || item->duration1 == 0)) {
         return true;
     }
     return false;
@@ -108,8 +109,7 @@ static bool bit_one_if(rmt_item32_t* item)
 {
     if((item->level0 == 1 && item->level1 == 0)
         && check_in_range(item->duration0, BIT_ONE_HIGH_US, BIT_MARGIN)
-        && (check_in_range(item->duration1, BIT_ONE_LOW_US, BIT_MARGIN)
-            || item->duration1 == 0)) {
+        && check_in_range(item->duration1, BIT_ONE_LOW_US, BIT_MARGIN)) {
         return true;
     }
     return false;
@@ -122,8 +122,7 @@ static bool bit_zero_if(rmt_item32_t* item)
 {
     if((item->level0 == 1 && item->level1 == 0)
         && check_in_range(item->duration0, BIT_ZERO_HIGH_US, BIT_MARGIN)
-        && (check_in_range(item->duration1, BIT_ZERO_LOW_US, BIT_MARGIN)
-            || item->duration1 == 0)) {
+        && check_in_range(item->duration1, BIT_ZERO_LOW_US, BIT_MARGIN)) {
         return true;
     }
     return false;
@@ -135,16 +134,12 @@ static bool bit_zero_if(rmt_item32_t* item)
  */
 static int parse_items(rmt_item32_t* item, int item_num, uint32_t* data)
 {
-    int w_len = item_num;
-    if(w_len < DATA_ITEM_NUM) {
+    if(item_num < DATA_ITEM_NUM) {
         return -1;
     }
-    int i = 0, j = 0;
-    if(!header_if(item++)) {
-        return -1;
-    }
+    int i = 0;
     uint32_t data_t = 0;
-    for(j = 0; j < 24; j++) {
+    for(int j = DATA_ITEM_NUM - 2; j >= 0; j--) {
         if(bit_one_if(item)) {
             data_t |= (1 << j);
         } else if(bit_zero_if(item)) {
@@ -154,6 +149,9 @@ static int parse_items(rmt_item32_t* item, int item_num, uint32_t* data)
         }
         item++;
         i++;
+    }
+    if(!header_if(item++)) {
+        return -1;
     }
     *data = data_t;
     return i;
@@ -168,7 +166,7 @@ static int build_items(rmt_item32_t* item, int item_num, uint32_t data)
     if(item_num < DATA_ITEM_NUM) {
         return -1;
     }
-    for (int j = 23; j >= 0; j--) {
+    for (int j = DATA_ITEM_NUM - 2; j >= 0; j--) {
         if(data & (1 << j)) {
             fill_item_bit_one(item);
         } else {
