@@ -1,8 +1,6 @@
-# Example: rmt_nec_tx_rx
+# ESP32 RMT RF
 
-This example uses the remote control (RMT) peripheral to transmit and receive codes for the NEC infrared remote protocol.
+Simple example of reading RF codes from a 433MHz receiver with the ESP32 RMT peripheral.
 
-Configuration (pin numbers, etc.) can be modified in top of the main/infrared_nec_main.c file.
-
-By default, this example runs a self test which assumes the TX and RX GPIO pins are connected together. To disable this, comment RMT_RX_SELF_TEST in infrared_nec_main.c.
-
+Currently this only supports protocol 1 from [rc-switch](https://github.com/sui77/rc-switch),
+used by the PT2262-type receivers.
