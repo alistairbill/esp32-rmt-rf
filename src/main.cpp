@@ -14,7 +14,7 @@ inline bool rf_valid(rmt_data_t* i)
 
 inline bool in_range(int duration_ticks, int target_us, int margin_us)
 {
-    return (duration_ticks < (target_us + margin_us)) 
+    return (duration_ticks < (target_us + margin_us))
         && (duration_ticks > (target_us - margin_us));
 }
 
@@ -33,23 +33,23 @@ void receive_data(uint32_t *data, size_t len)
     if (len < 25) return;
     rmt_data_t* items = (rmt_data_t*)data;
     uint32_t buf = 0;
+    // ignore the last bit in items[len - 1] (it's a sync bit)
     for (size_t i = 0; i < len - 1; i++) {
         if (!rf_valid(&items[i])) return;
         if (bit_one_if(&items[i])) {
             // one
-            buf |= (1 << (len - 1 - i));
+            buf |= (1 << (len - 2 - i)); // lsb <-> msb
         } else if (bit_zero_if(&items[i])) {
             // zero
-        } else return;
+        } else return; // pulse did not correspond to 0 or 1
     }
-    if (items[len - 1].level0 && in_range(items[len - 1].duration0, 35, 10)) buf |= (1 << (len - 1));
-    Serial.printf("Received: %d items: addr: %d cmd: %d\n", len, buf & 0xfffff, buf & 0xf);
+    Serial.printf("Received: %x (addr: %x cmd: %x)\n", buf, buf & 0xfffff0, buf & 0xf);
 }
 
-void setup() 
+void setup()
 {
     Serial.begin(115200);
-    
+
     // Initialize the channel to capture up to 192 items
     if ((rmt_recv = rmtInit(15, false, RMT_MEM_192)) == NULL)
     {
@@ -61,11 +61,12 @@ void setup()
     Serial.printf("real tick set to: %fns\n", realTick);
 
     rmtSetFilter(rmt_recv, true, 200);
+    rmtSetRxThreshold(rmt_recv, 950);
 
     // Ask to start reading
     rmtRead(rmt_recv, receive_data);
 }
 
-void loop() 
+void loop()
 {
 }
