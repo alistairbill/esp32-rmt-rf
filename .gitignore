@@ -1,4 +1,4 @@
-.pioenvs
-.piolibdeps
 CMakeListsPrivate.txt
 compile_commands.json
+build/
+sdkconfig
